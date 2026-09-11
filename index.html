@@ -871,7 +871,10 @@ footer a.back{display:inline-block;margin-top:20px;font-size:13px;font-weight:60
   font-size:34px;letter-spacing:.15em
 }
 @media(min-width:821px){ #mirror-title h1{display:none} }
-@media(max-width:820px){ .m-fact,.m-roomname{display:none} .room-fact{display:block} }
+@media(max-width:820px){
+  .m-fact,.m-roomname{display:none}
+  #stage-mirror.bulbs-up .room-fact.on{display:block}
+}
 /* The two nudges in room one. They are hints, not furniture: they never
    take a click, they go the moment the thing they point at has been used,
    and they come off the drawing under 820px, where the room's controls are
@@ -889,11 +892,14 @@ footer a.back{display:inline-block;margin-top:20px;font-size:13px;font-weight:60
 @media(max-width:820px){ .nudge{display:none} }
 @media(prefers-reduced-motion:reduce){ .nudge{transition:none} }
 .m-fact,.m-roomname{pointer-events:none}
+.m-fact{opacity:0;transition:opacity .5s ease}
+#stage-mirror.bulbs-up .m-fact.on{opacity:1}
+@media(prefers-reduced-motion:reduce){ .m-fact{transition:none} }
 .m-fog{fill:#08070b;opacity:.55;stroke:#f2ece1;stroke-opacity:.10;stroke-width:1}
 .m-fact-line{
   fill:#f2ece1;text-anchor:middle;
   font-family:'Inter',system-ui,-apple-system,sans-serif;font-weight:800;
-  font-size:20px;letter-spacing:.045em
+  font-size:18px;letter-spacing:.04em
 }
 .m-fact-cite{
   fill:#b9b1a4;text-anchor:middle;
@@ -1526,14 +1532,25 @@ footer a.back{display:inline-block;margin-top:20px;font-size:13px;font-weight:60
           <text class="tag" x="800" y="545">SKIN HEALTH</text>
         </g>
         <text class="m-roomname" x="800" y="242">SKIN HEALTH</text>
-        <!-- written on the glass -->
+        <!-- Written on the glass. One per visit, in turn: light it, read it,
+             come back and the mirror has something else to say. Adding a
+             third <g class="m-fact"> here lengthens the rotation with no
+             code change, exactly like adding a quote to a reveal. -->
         <g class="m-fact">
           <rect class="m-fog" x="626" y="292" width="348" height="190" rx="26"/>
-          <text class="m-fact-line" x="800" y="330">UP TO 80% OF VISIBLE</text>
-          <text class="m-fact-line" x="800" y="364">FACIAL AGING IS</text>
-          <text class="m-fact-line" x="800" y="398">ATTRIBUTED TO</text>
-          <text class="m-fact-line" x="800" y="432">UV EXPOSURE</text>
-          <text class="m-fact-cite" x="800" y="462">Flament et al., Clin Cosmet Investig Dermatol, 2013</text>
+          <text class="m-fact-line" x="800" y="330">A DRIVER SPENT 28 YEARS</text>
+          <text class="m-fact-line" x="800" y="364">WITH ONE SIDE OF HIS FACE</text>
+          <text class="m-fact-line" x="800" y="398">AT THE WINDOW.</text>
+          <text class="m-fact-line" x="800" y="432">ONLY THAT SIDE AGED.</text>
+          <text class="m-fact-cite" x="800" y="462">Gordon &amp; Brieva, New England Journal of Medicine, 2012</text>
+        </g>
+        <g class="m-fact">
+          <rect class="m-fog" x="626" y="292" width="348" height="190" rx="26"/>
+          <text class="m-fact-line" x="800" y="330">IDENTICAL TWINS.</text>
+          <text class="m-fact-line" x="800" y="364">FIVE YEARS MORE SMOKING</text>
+          <text class="m-fact-line" x="800" y="398">ON ONE OF THEM AND</text>
+          <text class="m-fact-line" x="800" y="432">YOU CAN TELL WHICH.</text>
+          <text class="m-fact-cite" x="800" y="462">Okada et al., Plastic and Reconstructive Surgery, 2013</text>
         </g>
       </g>
 
@@ -1550,9 +1567,13 @@ footer a.back{display:inline-block;margin-top:20px;font-size:13px;font-weight:60
 
     <div class="title-band" id="mirror-title">
       <h1 class="plate-caps">Skin Health</h1>
-      <div class="room-fact" id="mirror-fact">
-        <p class="stat">Up to 80% of visible facial aging is attributed to UV exposure</p>
-        <p class="cite">Flament et al., Clin Cosmet Investig Dermatol, 2013</p>
+      <div class="room-fact">
+        <p class="stat">A driver spent 28 years with one side of his face at the window. Only that side aged.</p>
+        <p class="cite">Gordon &amp; Brieva, New England Journal of Medicine, 2012</p>
+      </div>
+      <div class="room-fact">
+        <p class="stat">Identical twins. Five years more smoking on one of them and you can tell which.</p>
+        <p class="cite">Okada et al., Plastic and Reconstructive Surgery, 2013</p>
       </div>
     </div>
 
@@ -2617,7 +2638,18 @@ function wireDiscovery(){
        back out into is the one you just lit. Open it a second time and that
        visit is the one that ends in the dark. Then it starts over. */
     mirrorHolds = !mirrorHolds;
-    if (mirrorStage) mirrorStage.classList.add('bulbs-up');
+    if (mirrorStage){
+      mirrorStage.classList.add('bulbs-up');
+      /* next finding, counted off the markup so a third one needs no code */
+      var facts = mirrorStage.querySelectorAll('.m-fact, .room-fact');
+      var n = mirrorStage.querySelectorAll('.m-fact').length;
+      if (n){
+        mirrorFact = (mirrorFact + 1) % n;
+        [].forEach.call(facts, function(f, i){
+          f.classList.toggle('on', (i % n) === mirrorFact);
+        });
+      }
+    }
     openShelf('mirror');
   }, function(){ Sfx.mirror(); });
   wireOpener('hot-glowup', function(){ openShelf('glowup'); }, function(){ Sfx.cupboard(); });
@@ -2692,10 +2724,11 @@ function renderGroup(key){
     a.href = p[2]; a.target = '_blank'; a.rel = 'noopener';
     if (p[3]){
       a.className = 'gcard gcard-img';
-      var alt = p[4]
-        ? '<img class="alt" loading="lazy" alt="" aria-hidden="true" src="' + p[4] + '">'
+      var face = cardFaces(p);
+      var alt = face[1]
+        ? '<img class="alt" loading="lazy" alt="" aria-hidden="true" src="' + face[1] + '">'
         : '';
-      a.innerHTML = '<div class="cattile-img"><img loading="lazy" alt="" src="'+p[3]+'">'+alt+'</div>'+
+      a.innerHTML = '<div class="cattile-img"><img loading="lazy" alt="" src="'+face[0]+'">'+alt+'</div>'+
                     '<div class="cattile-cap"><span class="cattile-name">'+p[1]+'</span>'+
                     '<span class="cattile-sub">Add to cart &rarr;</span></div>';
     } else {
@@ -2794,7 +2827,7 @@ var Ring = (function(){
        inside the front of it. */
     var ry = Math.min(window.innerHeight * 0.17, 150);
     var base = Math.min(w * 0.23, 268);
-    var angle = offset + idle + lastP * TAU * 1.9;
+    var angle = offset + idle + lastP * TAU;   /* exactly one turn across the room */
     var bestDepth = -2, best = 0;
 
     for (var i = 0; i < n; i++){
@@ -2902,6 +2935,22 @@ addEventListener('resize', function(){
   });
 }, { passive: true });
 
+/* Which of a product's two photographs leads.
+   Briefly the second photograph led and the packshot came up on hover. That
+   was wrong in practice: the "second photograph" is whatever Amway publishes
+   after the first, and for a good many products that is a Let's Compare
+   sheet, a supplement-facts panel, or the same studio background over and
+   over. The photograph Amway itself leads with is the considered one.
+   So the catalogue image is the face of the card again, the second one is
+   what hover brings up, and where a specific product deserves a different
+   face it is named in LEAD (see lead-images.tsv) rather than being decided
+   by a rule that cannot see the pictures. */
+var LEAD = {};   /* product id -> the photograph that should face out */
+function cardFaces(row){
+  var lead = (typeof LEAD === 'object' && LEAD) ? LEAD[row[0]] : null;
+  if (lead && lead !== row[3]) return [lead, row[3]];
+  return [row[3], row[4] || ''];
+}
 function shelfCard(row){
   var a = document.createElement('a');
   a.href = row[2]; a.target = '_blank'; a.rel = 'noopener';
@@ -2909,10 +2958,11 @@ function shelfCard(row){
   /* The second photograph, exactly as the category grid does it. Shelf
      cards were built without one at all, so nothing on any shelf ever
      swapped — the markup for it simply was not there. */
-  var alt = row[4]
-    ? '<img class="alt" loading="lazy" alt="" aria-hidden="true" src="' + row[4] + '">'
+  var face = cardFaces(row);
+  var alt = face[1]
+    ? '<img class="alt" loading="lazy" alt="" aria-hidden="true" src="' + face[1] + '">'
     : '';
-  a.innerHTML = '<div class="cattile-img"><img loading="lazy" alt="" src="'+row[3]+'">'+alt+'</div>'+
+  a.innerHTML = '<div class="cattile-img"><img loading="lazy" alt="" src="'+face[0]+'">'+alt+'</div>'+
                 '<div class="cattile-cap"><span class="cattile-name">'+row[1]+'</span>'+
                 '<span class="cattile-sub">Learn more &rarr;</span></div>';
   guardImage(a.querySelector('.cattile-img > img:first-child'));
@@ -2931,6 +2981,7 @@ function shelfCard(row){
    which for a single shelf is simply that shelf's own. */
 var openShelfKey = null;   /* which shelf the panel is showing */
 var mirrorHolds  = false;  /* does the mirror's light survive the next close? */
+var mirrorFact   = -1;     /* which finding the glass is showing */
 function openShelf(keys, head){
   keys = [].concat(keys).filter(function(k){ return SHELVES[k]; });
   if (!keys.length) return;

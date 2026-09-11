@@ -2936,20 +2936,25 @@ addEventListener('resize', function(){
 }, { passive: true });
 
 /* Which of a product's two photographs leads.
-   Briefly the second photograph led and the packshot came up on hover. That
-   was wrong in practice: the "second photograph" is whatever Amway publishes
-   after the first, and for a good many products that is a Let's Compare
-   sheet, a supplement-facts panel, or the same studio background over and
-   over. The photograph Amway itself leads with is the considered one.
-   So the catalogue image is the face of the card again, the second one is
-   what hover brings up, and where a specific product deserves a different
-   face it is named in LEAD (see lead-images.tsv) rather than being decided
-   by a rule that cannot see the pictures. */
-var LEAD = {};   /* product id -> the photograph that should face out */
+
+   The second photograph leads, because it is the one taken somewhere — a
+   bottle on a rock, a box among the leaves — and the first is usually the
+   same product on the same white sweep as everything else. That is Peter's
+   call and it is right in the great majority of cases.
+
+   It is wrong in a few, because "the second photograph" is only whatever
+   Amway publishes next, and for some products that is a Let's Compare sheet
+   or a supplement-facts panel. Those are named in LEAD, which takes either
+   the string 'catalog' (keep the catalogue photograph in front) or an exact
+   image URL (use this one). Data, not a rule — the agent sandbox cannot
+   reach Amway's image CDN, so no rule about which variant looks better can
+   ever be checked here. */
+var LEAD = {"101444":"catalog","126184":"catalog","126197":"catalog","126198":"catalog","126199":"catalog","126201":"catalog","126202":"catalog","126883":"catalog","126981":"catalog","126982":"catalog","126983":"catalog","126984":"catalog","126986":"catalog","126987":"catalog","126998":"catalog","127070":"catalog","127071":"catalog","127935":"catalog","127936":"catalog","128583":"catalog","266673":"catalog","107846":"catalog","128154":"catalog","128155":"catalog","128156":"catalog","128167":"catalog","128168":"catalog","128169":"catalog"};/*LEAD:GENERATED*/
 function cardFaces(row){
-  var lead = (typeof LEAD === 'object' && LEAD) ? LEAD[row[0]] : null;
-  if (lead && lead !== row[3]) return [lead, row[3]];
-  return [row[3], row[4] || ''];
+  var want = LEAD[row[0]];
+  if (want === 'catalog') return [row[3], row[4] || ''];
+  if (want) return [want, row[3]];
+  return row[4] ? [row[4], row[3]] : [row[3], ''];
 }
 function shelfCard(row){
   var a = document.createElement('a');

@@ -2324,7 +2324,7 @@ var Door = (function(){
     Sfx.lock();
     Sfx.begin();
 
-    if (hasClip){
+    if (hasClip && !ScrollDriver.reduced){
       /* The capsule goes into the lock, and the door leaves when the clip
          does. Timing is read off the file rather than written here, so
          re-cutting the clip in door-post.sh does not need a code change.
@@ -2355,30 +2355,59 @@ var Door = (function(){
      before the page will show it, which rules out a missing file, a codec
      the browser will not take, and a half-written asset in one test. Under
      reduced motion the video is never asked for at all. */
+  /* The clip path is entered OPTIMISTICALLY and left only on a real failure.
+
+     The first version waited for the loop to decode a frame before swapping
+     the drawn key out. That works on desktop and never fires on iOS: Safari
+     ignores preload="auto" on video and defers loading until playback is
+     requested, so readyState stays 0, canplay never arrives, and an iPhone
+     saw the key forever. Decode progress is the wrong signal.
+
+     What the gate is actually for is a browser that cannot take the codec
+     and files that are not in the repo. The first is answerable
+     synchronously; the second announces itself with an error event. So:
+     show the stage straight away, and revert if a file genuinely fails.
+     The poster is the correct picture from the first frame either way, so
+     there is nothing to look at in the meantime. */
   function tryClip(){
-    if (!stage || !vIdle || ScrollDriver.reduced) return;
-    vIdle.muted = true;                     /* the property, not just the attribute: Safari reads this one */
-    function ready(){
-      if (hasClip) return;
-      hasClip = true;
-      el.classList.add('has-clip');
-      var pr = vIdle.play();
-      if (pr && pr.catch) pr.catch(function(){ /* autoplay refused: the poster frame stands in */ });
+    if (!stage || !vIdle) return;
+    var can = '';
+    try { can = vIdle.canPlayType('video/mp4; codecs="avc1.42E01E"') ||
+                vIdle.canPlayType('video/mp4'); } catch(e){}
+    if (!can) return;                  /* no H.264: the drawn key stays */
+
+    hasClip = true;
+    el.classList.add('has-clip');
+    var h = document.getElementById('door-hint');
+    if (h && h.textContent.trim() === 'Turn the key') h.textContent = 'Open the lock';
+
+    /* Only the loop failing takes the stage away. If just the one-shot is
+       missing the click still opens the door on the timer, so there is no
+       reason to throw the loop away with it. */
+    function revert(){
+      hasClip = false;
+      el.classList.remove('has-clip');
+      if (h && h.textContent.trim() === 'Open the lock') h.textContent = 'Turn the key';
     }
-    /* preload="auto" means the loop can be decodable BEFORE this runs, and a
-       canplay that already fired is a canplay never heard. So the state is
-       checked first and only then listened for. Caught this with a headless
-       Chromium that could not decode H.264 at all: the listener was the only
-       path in, and there is no reason for it to be. */
-    if (vIdle.readyState >= 3) ready();
-    else {
-      vIdle.addEventListener('canplay', ready);
-      vIdle.addEventListener('loadeddata', function(){ if (vIdle.readyState >= 3) ready(); });
-      /* error: the clips are not in the repo yet, or this browser will not
-         take the codec. Either way the drawn key stays and nothing else on
-         the page is affected. */
-      vIdle.addEventListener('error', function(){});
-    }
+    vIdle.addEventListener('error', revert);
+    /* The src is on the tag, so the browser starts fetching during parse and
+       a missing file has usually FAILED before this script runs at all — the
+       listener above would never hear it. Same trap as waiting for canplay,
+       just pointing the other way, so the state gets read as well as
+       listened for. networkState 3 is NETWORK_NO_SOURCE: nothing usable. */
+    if (vIdle.error || vIdle.networkState === 3) revert();
+
+    /* Reduced motion keeps the stage and its poster — a still photograph of
+       the lock, which is the right image and not motion. It simply never
+       plays, here or on the click. */
+    if (ScrollDriver.reduced) return;
+
+    vIdle.muted = true;                /* the property: Safari reads this one */
+    var pr = vIdle.play();
+    /* Refused autoplay is normal, not an error — Low Power Mode on iOS turns
+       it off wholesale. The poster holds the frame and the click still works,
+       because a click is a user gesture and those are never refused. */
+    if (pr && pr.catch) pr.catch(function(){});
   }
 
   return {
